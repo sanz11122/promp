@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt Library</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            padding: 40px 20px;
+            border-bottom: 1px solid #222;
+            margin-bottom: 30px;
+        }
+        
+        header h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        
+        header p { color: #888; font-size: 1.1rem; }
+        
+        .auth-box {
+            background: #111118;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            display: none;
+        }
+        
+        .auth-box.active { display: block; }
+        
+        .auth-box h3 { color: #667eea; margin-bottom: 15px; }
+        
+        .auth-box input {
+            width: 100%;
+            padding: 12px 16px;
+            background: #0a0a0f;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 1rem;
+            margin-bottom: 12px;
+            outline: none;
+        }
+        
+        .auth-box input:focus { border-color: #667eea; }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #222;
+            color: #ccc;
+            border: 1px solid #444;
+        }
+        
+        .btn-secondary:hover { background: #333; }
+        
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        
+        .add-form {
+            background: #111118;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            display: none;
+        }
+        
+        .add-form.active { display: block; }
+        
+        .add-form h3 { color: #28a745; margin-bottom: 20px; }
+        
+        .form-group { margin-bottom: 18px; }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #aaa;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 14px;
+            background: #0a0a0f;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+            font-family: inherit;
+        }
+        
+        .form-group textarea {
+            min-height: 120px;
+            resize: vertical;
+            line-height: 1.6;
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus { border-color: #667eea; }
+        
+        .prompts-grid { display: grid; gap: 20px; }
+        
+        .prompt-card {
+            background: #111118;
+            border: 1px solid #222;
+            border-radius: 12px;
+            padding: 25px;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .prompt-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(to bottom, #667eea, #764ba2);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .prompt-card:hover {
+            border-color: #444;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        
+        .prompt-card:hover::before { opacity: 1; }
+        
+        .prompt-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 15px;
+        }
+        
+        .prompt-title {
+            font-size: 1.3rem;
+            color: #fff;
+            font-weight: 600;
+        }
+        
+        .prompt-category {
+            background: #222;
+            color: #667eea;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .prompt-text {
+            background: #0a0a0f;
+            border: 1px solid #222;
+            border-radius: 8px;
+            padding: 16px;
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 0.9rem;
+            line-height: 1.7;
+            color: #b0b0b0;
+            white-space: pre-wrap;
+            word-break: break-word;
+            margin-bottom: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .prompt-text::-webkit-scrollbar { width: 6px; }
+        .prompt-text::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        
+        .prompt-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #666;
+            font-size: 0.85rem;
+        }
+        
+        .prompt-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .prompt-actions .btn {
+            padding: 8px 16px;
+            font-size: 0.85rem;
+        }
+        
+        .run-output {
+            background: #0a0a0f;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 15px;
+            display: none;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: #a0ffa0;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .run-output.active { display: block; }
+        .run-output.error { color: #ff6b6b; }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #555;
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #222;
+            color: #fff;
+            padding: 16px 24px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            transform: translateX(400px);
+            transition: transform 0.3s;
+            z-index: 1000;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+        
+        .toast.show { transform: translateX(0); }
+        .toast.success { border-left-color: #28a745; }
+        .toast.error { border-left-color: #dc3545; }
+        
+        .login-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #111118;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #dc3545;
+        }
+        
+        .status-dot.online { background: #28a745; box-shadow: 0 0 10px #28a745; }
+        
+        .filter-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-tab {
+            padding: 8px 20px;
+            background: #111118;
+            border: 1px solid #333;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+        
+        .filter-tab:hover { border-color: #667eea; }
+        .filter-tab.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-color: transparent;
+            color: white;
+        }
+        
+        .copy-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #222;
+            border: 1px solid #444;
+            color: #888;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            opacity: 0;
+            transition: all 0.3s;
+        }
+        
+        .prompt-card:hover .copy-btn { opacity: 1; }
+        .copy-btn:hover { background: #333; color: #fff; }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #333;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .sync-status {
+            background: #111118;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 12px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            color: #888;
+        }
+        
+        .sync-status.synced { color: #28a745; border-color: #28a745; }
+        .sync-status.syncing { color: #667eea; }
+        
+        @media (max-width: 600px) {
+            header h1 { font-size: 1.8rem; }
+            .prompt-header { flex-direction: column; gap: 10px; }
+            .login-status { position: relative; top: 0; right: 0; margin-bottom: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🧠 Prompt Library</h1>
+            <p>Koleksi prompt terbaik untuk AI & produktivitas</p>
+        </header>
+        
+        <div class="sync-status" id="syncStatus">
+            <span class="loading" id="syncLoader" style="display:none;"></span>
+            <span id="syncText">🔄 Menyambungkan ke database...</span>
+        </div>
+        
+        <div class="login-status" id="loginStatus">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="statusText">Guest Mode</span>
+            <button class="btn btn-secondary" id="loginBtn" onclick="toggleAuth()" style="padding: 6px 14px; font-size: 0.8rem;">Login</button>
+        </div>
+        
+        <div class="auth-box" id="authBox">
+            <h3>🔐 Owner Login</h3>
+            <input type="password" id="ownerKey" placeholder="Masukkan owner key..." onkeypress="if(event.key==='Enter')doLogin()">
+            <button class="btn btn-primary" onclick="doLogin()">Login</button>
+            <button class="btn btn-secondary" onclick="toggleAuth()">Batal</button>
+        </div>
+        
+        <div class="add-form" id="addForm">
+            <h3>➕ Tambah Prompt Baru</h3>
+            <div class="form-group">
+                <label>Judul Prompt</label>
+                <input type="text" id="promptTitle" placeholder="Contoh: Prompt SEO Blog">
+            </div>
+            <div class="form-group">
+                <label>Kategori</label>
+                <select id="promptCategory">
+                    <option value="Writing">✍️ Writing</option>
+                    <option value="Coding">💻 Coding</option>
+                    <option value="Marketing">📢 Marketing</option>
+                    <option value="Design">🎨 Design</option>
+                    <option value="Research">🔬 Research</option>
+                    <option value="Other">📦 Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Isi Prompt</label>
+                <textarea id="promptText" placeholder="Masukkan prompt teks di sini..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Run Command (opsional)</label>
+                <input type="text" id="promptRun" placeholder="Contoh: echo 'Hello World'">
+            </div>
+            <button class="btn btn-success" onclick="addPrompt()">
+                <span>Simpan Prompt</span>
+            </button>
+        </div>
+        
+        <div class="filter-tabs" id="filterTabs">
+            <div class="filter-tab active" onclick="filterPrompts('all')">Semua</div>
+            <div class="filter-tab" onclick="filterPrompts('Writing')">Writing</div>
+            <div class="filter-tab" onclick="filterPrompts('Coding')">Coding</div>
+            <div class="filter-tab" onclick="filterPrompts('Marketing')">Marketing</div>
+            <div class="filter-tab" onclick="filterPrompts('Design')">Design</div>
+            <div class="filter-tab" onclick="filterPrompts('Research')">Research</div>
+        </div>
+        
+        <div class="prompts-grid" id="promptsList"></div>
+    </div>
+    
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ═══════════════════════════════════════════════
+        // KONFIGURASI SUPABASE — GANTI INI
+        // ═══════════════════════════════════════════════
+        const SUPABASE_URL = 'https://bfyyhtzkcpgfbfzppyld.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_h0wtjNqr4rxtAQeQ7E8Djg_oBy4Lg4f';
+        // ═══════════════════════════════════════════════
+        
+        const OWNER_KEY = 'sayang';
+        let isOwner = false;
+        let prompts = [];
+        let supabase;
+        
+        // Inisialisasi Supabase
+        function initSupabase() {
+            if (SUPABASE_URL.includes('YOUR_PROJECT_ID')) {
+                showToast('⚠️ Belum konfigurasi Supabase! Edit SUPABASE_URL & SUPABASE_ANON_KEY di kode.', 'error');
+                document.getElementById('syncText').textContent = '❌ Database belum dikonfigurasi';
+                return false;
+            }
+            
+            try {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                document.getElementById('syncText').textContent = '✅ Terhubung ke database';
+                document.getElementById('syncStatus').classList.add('synced');
+                loadPromptsFromDB();
+                return true;
+            } catch (e) {
+                showToast('❌ Gagal konek ke database: ' + e.message, 'error');
+                return false;
+            }
+        }
+        
+        // ═══════════════════════════════════════════════
+        // DATABASE OPERATIONS (Supabase)
+        // ═══════════════════════════════════════════════
+        
+        async function loadPromptsFromDB() {
+            document.getElementById('syncLoader').style.display = 'inline-block';
+            document.getElementById('syncText').textContent = '🔄 Loading prompts...';
+            
+            try {
+                const { data, error } = await supabase
+                    .from('prompts')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                prompts = data || [];
+                renderPrompts();
+                document.getElementById('syncText').textContent = `✅ ${prompts.length} prompts loaded`;
+                document.getElementById('syncStatus').classList.add('synced');
+            } catch (e) {
+                showToast('❌ Error load: ' + e.message, 'error');
+                document.getElementById('syncText').textContent = '❌ Error loading data';
+            } finally {
+                document.getElementById('syncLoader').style.display = 'none';
+            }
+        }
+        
+        async function addPromptToDB(promptData) {
+            try {
+                const { data, error } = await supabase
+                    .from('prompts')
+                    .insert([promptData])
+                    .select();
+                
+                if (error) throw error;
+                return data[0];
+            } catch (e) {
+                throw e;
+            }
+        }
+        
+        async function deletePromptFromDB(id) {
+            try {
+                const { error } = await supabase
+                    .from('prompts')
+                    .delete()
+                    .eq('id', id);
+                
+                if (error) throw error;
+            } catch (e) {
+                throw e;
+            }
+        }
+        
+        async function updatePromptInDB(id, updates) {
+            try {
+                const { error } = await supabase
+                    .from('prompts')
+                    .update(updates)
+                    .eq('id', id);
+                
+                if (error) throw error;
+            } catch (e) {
+                throw e;
+            }
+        }
+        
+        // ═══════════════════════════════════════════════
+        // AUTH & UI
+        // ═══════════════════════════════════════════════
+        
+        function toggleAuth() {
+            const box = document.getElementById('authBox');
+            box.classList.toggle('active');
+            if (box.classList.contains('active')) {
+                document.getElementById('ownerKey').focus();
+            }
+        }
+        
+        function doLogin() {
+            const key = document.getElementById('ownerKey').value;
+            if (key === OWNER_KEY) {
+                isOwner = true;
+                document.getElementById('statusDot').classList.add('online');
+                document.getElementById('statusText').textContent = 'Owner Mode';
+                document.getElementById('loginBtn').textContent = 'Logout';
+                document.getElementById('loginBtn').onclick = doLogout;
+                document.getElementById('addForm').classList.add('active');
+                document.getElementById('authBox').classList.remove('active');
+                document.getElementById('ownerKey').value = '';
+                showToast('✅ Login berhasil! Mode Owner aktif.', 'success');
+                renderPrompts();
+            } else {
+                showToast('❌ Key salah! Akses ditolak.', 'error');
+            }
+        }
+        
+        function doLogout() {
+            isOwner = false;
+            document.getElementById('statusDot').classList.remove('online');
+            document.getElementById('statusText').textContent = 'Guest Mode';
+            document.getElementById('loginBtn').textContent = 'Login';
+            document.getElementById('loginBtn').onclick = toggleAuth;
+            document.getElementById('addForm').classList.remove('active');
+            showToast('👋 Logout berhasil.', 'success');
+            renderPrompts();
+        }
+        
+        // ═══════════════════════════════════════════════
+        // CRUD OPERATIONS
+        // ═══════════════════════════════════════════════
+        
+        async function addPrompt() {
+            const title = document.getElementById('promptTitle').value.trim();
+            const category = document.getElementById('promptCategory').value;
+            const text = document.getElementById('promptText').value.trim();
+            const run = document.getElementById('promptRun').value.trim();
+            
+            if (!title || !text) {
+                showToast('❌ Judul dan isi prompt wajib diisi!', 'error');
+                return;
+            }
+            
+            if (!supabase) {
+                showToast('❌ Database belum terhubung!', 'error');
+                return;
+            }
+            
+            const newPrompt = {
+                title,
+                category,
+                text,
+                run_cmd: run || 'Prompt siap digunakan',
+                views: 0
+            };
+            
+            try {
+                const saved = await addPromptToDB(newPrompt);
+                prompts.unshift(saved);
+                
+                document.getElementById('promptTitle').value = '';
+                document.getElementById('promptText').value = '';
+                document.getElementById('promptRun').value = '';
+                
+                showToast('✅ Prompt berhasil disimpan ke database!', 'success');
+                renderPrompts();
+            } catch (e) {
+                showToast('❌ Gagal simpan: ' + e.message, 'error');
+            }
+        }
+        
+        async function deletePrompt(id) {
+            if (!confirm('Yakin hapus prompt ini?')) return;
+            
+            try {
+                await deletePromptFromDB(id);
+                prompts = prompts.filter(p => p.id !== id);
+                renderPrompts();
+                showToast('🗑️ Prompt dihapus.', 'success');
+            } catch (e) {
+                showToast('❌ Gagal hapus: ' + e.message, 'error');
+            }
+        }
+        
+        // ═══════════════════════════════════════════════
+        // RENDER
+        // ═══════════════════════════════════════════════
+        
+        let currentFilter = 'all';
+        
+        function filterPrompts(category) {
+            currentFilter = category;
+            document.querySelectorAll('.filter-tab').forEach(tab => {
+                tab.classList.remove('active');
+                if (tab.textContent.includes(category === 'all' ? 'Semua' : category)) {
+                    tab.classList.add('active');
+                }
+            });
+            renderPrompts();
+        }
+        
+        function renderPrompts() {
+            const list = document.getElementById('promptsList');
+            const filtered = currentFilter === 'all' 
+                ? prompts 
+                : prompts.filter(p => p.category === currentFilter);
+            
+            if (filtered.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:80px;height:80px;margin-bottom:20px;opacity:0.3;">
+                            <path d="M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.4 2.245 4.5 4.5 0 008.4-2.245c0-.399-.078-.78-.22-1.128zm0 0a15.998 15.998 0 003.388-1.62m-5.043-.025a15.994 15.994 0 011.622-3.395m3.42 3.42a15.995 15.995 0 004.764-4.648l3.876-5.814a1.151 1.151 0 00-1.597-1.597L14.146 6.32a15.996 15.996 0 00-4.649 4.763m3.42 3.42a6.776 6.776 0 00-3.42-3.42"/>
+                        </svg>
+                        <h3>Belum ada prompt</h3>
+                        <p>${isOwner ? 'Tambah prompt pertama mu!' : 'Owner belum menambahkan prompt.'}</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            list.innerHTML = filtered.map(p => `
+                <div class="prompt-card" data-id="${p.id}">
+                    <button class="copy-btn" onclick="copyPrompt('${p.id}')">📋 Copy</button>
+                    <div class="prompt-header">
+                        <div class="prompt-title">${escapeHtml(p.title)}</div>
+                        <span class="prompt-category">${p.category}</span>
+                    </div>
+                    <div class="prompt-text">${escapeHtml(p.text)}</div>
+                    <div class="prompt-meta">
+                        <span>📅 ${formatDate(p.created_at)} • 👁️ ${p.views || 0} views</span>
+                        ${isOwner ? `<span>🆔 #${p.id.toString().slice(-6)}</span>` : ''}
+                    </div>
+                    <div class="prompt-actions">
+                        <button class="btn btn-primary" onclick="runPrompt('${p.id}')">
+                            ▶️ Run
+                        </button>
+                        ${isOwner ? `
+                            <button class="btn btn-secondary" onclick="editPrompt('${p.id}')">✏️ Edit</button>
+                            <button class="btn btn-danger" onclick="deletePrompt('${p.id}')">🗑️ Hapus</button>
+                        ` : ''}
+                    </div>
+                    <div class="run-output" id="output-${p.id}"></div>
+                </div>
+            `).join('');
+        }
+        
+        // ═══════════════════════════════════════════════
+        // ACTIONS
+        // ═══════════════════════════════════════════════
+        
+        function copyPrompt(id) {
+            const p = prompts.find(x => x.id == id);
+            navigator.clipboard.writeText(p.text).then(() => {
+                showToast('📋 Prompt dicopy ke clipboard!', 'success');
+            });
+        }
+        
+        async function runPrompt(id) {
+            const p = prompts.find(x => x.id == id);
+            const output = document.getElementById(`output-${id}`);
+            
+            // Increment views
+            p.views = (p.views || 0) + 1;
+            updatePromptInDB(id, { views: p.views });
+            
+            document.querySelector(`[data-id="${id}"] .prompt-meta span`).textContent = 
+                `📅 ${formatDate(p.created_at)} • 👁️ ${p.views} views`;
+            
+            output.classList.add('active');
+            output.innerHTML = '<div class="loading"></div> Menjalankan...';
+            
+            setTimeout(() => {
+                output.innerHTML = `🚀 <strong>RUN OUTPUT:</strong>\n\n${escapeHtml(p.run_cmd || 'Prompt siap digunakan')}\n\n━━━━━━━━━━━━━━━━━━━━\n✅ Eksekusi berhasil!\n💡 Tips: Copy prompt di atas dan paste ke AI favoritmu.`;
+            }, 800);
+        }
+        
+        function editPrompt(id) {
+            const p = prompts.find(x => x.id == id);
+            document.getElementById('promptTitle').value = p.title;
+            document.getElementById('promptCategory').value = p.category;
+            document.getElementById('promptText').value = p.text;
+            document.getElementById('promptRun').value = p.run_cmd || '';
+            document.getElementById('addForm').classList.add('active');
+            document.getElementById('addForm').scrollIntoView({ behavior: 'smooth' });
+            
+            const oldAdd = window.addPrompt;
+            window.addPrompt = async function() {
+                p.title = document.getElementById('promptTitle').value;
+                p.category = document.getElementById('promptCategory').value;
+                p.text = document.getElementById('promptText').value;
+                p.run_cmd = document.getElementById('promptRun').value || 'Prompt siap digunakan';
+                
+                try {
+                    await updatePromptInDB(id, {
+                        title: p.title,
+                        category: p.category,
+                        text: p.text,
+                        run_cmd: p.run_cmd
+                    });
+                    
+                    document.getElementById('promptTitle').value = '';
+                    document.getElementById('promptText').value = '';
+                    document.getElementById('promptRun').value = '';
+                    window.addPrompt = oldAdd;
+                    renderPrompts();
+                    showToast('✅ Prompt diupdate!', 'success');
+                } catch (e) {
+                    showToast('❌ Gagal update: ' + e.message, 'error');
+                }
+            };
+        }
+        
+        // ═══════════════════════════════════════════════
+        // UTILS
+        // ═══════════════════════════════════════════════
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const d = new Date(dateStr);
+            return d.toLocaleDateString('id-ID');
+        }
+        
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+        
+        // ═══════════════════════════════════════════════
+        // INIT
+        // ═══════════════════════════════════════════════
+        
+        document.addEventListener('DOMContentLoaded', initSupabase);
+    </script>
+</body>
+</html>
